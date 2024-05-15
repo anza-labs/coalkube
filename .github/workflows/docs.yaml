@@ -24,23 +24,19 @@ jobs:
         with:
           node-version: node
       - run: |
+          cd docs
+          yarn install
+
           ref_name="${{ github.ref_name }}"
           semver_regex="^([0-9]+)\.([0-9]+)\.([0-9]+)(-.+)?$"
-
           if [[ $ref_name =~ ${semver_regex} ]]; then
             major_minor="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
             echo "Ref name is a semver: ${ref_name}"
             echo "Stripped version: ${major_minor}"
-            echo "name=${major_minor}" >> ${GITHUB_OUTPUT}
-          else
-            echo "Ref name is not a semver: ${ref_name}"
-            echo "name=${ref_name}" >> ${GITHUB_OUTPUT}
+
+            yarn run docusaurus docs:version "${major_minor}"
           fi
-        id: version
-      - run: |
-          cd docs
-          yarn install
-          yarn run docusaurus docs:version "${{ steps.version.outputs.name }}"
+
           yarn deploy
         env:
           GIT_USER: ${{ github.actor }}
