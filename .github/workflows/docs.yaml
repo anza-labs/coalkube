@@ -1,0 +1,45 @@
+name: image-docs
+
+on:
+  push:
+    branches:
+      - "main"
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: fregante/setup-git-user@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: node
+      - run: |
+          ref_name="${{ github.ref_name }}"
+          semver_regex="^([0-9]+)\.([0-9]+)\.([0-9]+)(-.+)?$"
+
+          if [[ $ref_name =~ ${semver_regex} ]]; then
+            major_minor="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+            echo "Ref name is a semver: ${ref_name}"
+            echo "Stripped version: ${major_minor}"
+            echo "name=${major_minor}" >> ${GITHUB_OUTPUT}
+          else
+            echo "Ref name is not a semver: ${ref_name}"
+            echo "name=${ref_name}" >> ${GITHUB_OUTPUT}
+          fi
+        id: version
+      - run: |
+          yarn install
+          yarn run docusaurus docs:version "${{ github.version.outputs.name }}"
+          yarn deploy
+        env:
+          GIT_USER: ${{ github.actor }}
+          GIT_PASS: ${{ secrets.GITHUB_TOKEN }}
